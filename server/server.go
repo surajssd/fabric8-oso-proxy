@@ -29,6 +29,7 @@ import (
 	"github.com/containous/traefik/middlewares"
 	"github.com/containous/traefik/middlewares/accesslog"
 	mauth "github.com/containous/traefik/middlewares/auth"
+	osio "github.com/containous/traefik/middlewares/osio"
 	"github.com/containous/traefik/provider"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/server/cookie"
@@ -487,6 +488,7 @@ func (server *Server) configureProviders() {
 	if server.globalConfiguration.DynamoDB != nil {
 		server.providers = append(server.providers, server.globalConfiguration.DynamoDB)
 	}
+
 }
 
 func (server *Server) startProviders() {
@@ -778,6 +780,12 @@ func (server *Server) loadConfig(configurations types.Configurations, globalConf
 
 				entryPoint := globalConfiguration.EntryPoints[entryPointName]
 				n := negroni.New()
+				if frontendName == "auth" {
+					// TODO: Expose via config?
+					fmt.Println("Register OSIOAuth")
+					n.Use(osio.NewPreConfiguredOSIOAuth())
+				}
+
 				if entryPoint.Redirect != nil {
 					if redirectHandlers[entryPointName] != nil {
 						n.Use(redirectHandlers[entryPointName])
@@ -990,6 +998,7 @@ func (server *Server) loadConfig(configurations types.Configurations, globalConf
 					} else {
 						n.UseHandler(lb)
 					}
+
 					backends[entryPointName+frontend.Backend] = n
 				} else {
 					log.Debugf("Reusing backend %s", frontend.Backend)
@@ -997,6 +1006,7 @@ func (server *Server) loadConfig(configurations types.Configurations, globalConf
 				if frontend.Priority > 0 {
 					newServerRoute.route.Priority(frontend.Priority)
 				}
+
 				server.wireFrontendBackend(newServerRoute, backends[entryPointName+frontend.Backend])
 
 				err := newServerRoute.route.GetError()
