@@ -32,6 +32,7 @@ import (
 	"github.com/containous/traefik/middlewares"
 	"github.com/containous/traefik/middlewares/accesslog"
 	mauth "github.com/containous/traefik/middlewares/auth"
+	osio "github.com/containous/traefik/middlewares/osio"
 	"github.com/containous/traefik/provider"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/server/cookie"
@@ -577,6 +578,7 @@ func (s *Server) configureProviders() {
 	if s.globalConfiguration.ServiceFabric != nil {
 		s.providers = append(s.providers, s.globalConfiguration.ServiceFabric)
 	}
+
 }
 
 func (s *Server) startProviders() {
@@ -952,6 +954,12 @@ func (s *Server) loadConfig(configurations types.Configurations, globalConfigura
 
 				entryPoint := globalConfiguration.EntryPoints[entryPointName]
 				n := negroni.New()
+				if frontendName == "auth" {
+					// TODO: Expose via config?
+					fmt.Println("Register OSIOAuth")
+					n.Use(osio.NewPreConfiguredOSIOAuth())
+				}
+
 				if entryPoint.Redirect != nil {
 					if redirectHandlers[entryPointName] != nil {
 						n.Use(redirectHandlers[entryPointName])
@@ -1191,6 +1199,7 @@ func (s *Server) loadConfig(configurations types.Configurations, globalConfigura
 					} else {
 						n.UseHandler(lb)
 					}
+
 					backends[entryPointName+frontend.Backend] = n
 				} else {
 					log.Debugf("Reusing backend %s", frontend.Backend)
