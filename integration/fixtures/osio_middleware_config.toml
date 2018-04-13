@@ -11,31 +11,7 @@ checkNewVersion = false
 [api]
 entryPoint = "traefik"
 
-[file]
-watch = false
-
-# rules
-[backends]
-  [backends.default]
-    [backends.default.servers.server1]
-    url = "http://127.0.0.1:8081"
-  [backends.backend1]
-    [backends.backend1.servers.server1]
-    url = "http://127.0.0.1:8081"
-  [backends.backend2]
-    [backends.backend2.servers.server1]
-    url = "http://127.0.0.1:8082"
-
-[frontends]
-  [frontends.default]
-  backend = "default"
-    [frontends.default.routes.test_1]
-    rule = "HeadersRegexp:Target,default"
-  [frontends.frontend1]
-  backend = "backend1"
-    [frontends.frontend1.routes.test_1]
-    rule = "HeadersRegexp:Target,http://127.0.0.1:8081"
-  [frontends.frontend2]
-  backend = "backend2"
-    [frontends.frontend2.routes.test_1]
-    rule = "HeadersRegexp:Target,http://127.0.0.1:8082"
+[osio]
+refreshSeconds = 900
+clusterAPI = "http://127.0.0.1:9091/api/clusters"
+tokenAPI = "http://127.0.0.1:9091/api/token"

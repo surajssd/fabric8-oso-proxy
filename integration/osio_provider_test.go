@@ -5,24 +5,24 @@ import (
 	"os"
 	"time"
 
+	"github.com/containous/traefik/integration/common"
 	"github.com/containous/traefik/integration/try"
 	"github.com/containous/traefik/log"
 	"github.com/go-check/check"
 	checker "github.com/vdemeester/shakers"
 )
 
-// OSIOProviderSuite
 type OSIOProviderSuite struct{ BaseSuite }
 
 func (s *OSIOProviderSuite) TestOSIOProvider(c *check.C) {
 	// configure OSIO
-	os.Setenv("WIT_URL", witURL)
-	os.Setenv("AUTH_URL", authURL)
+	os.Setenv("WIT_URL", common.WitURL)
+	os.Setenv("AUTH_URL", common.AuthURL)
 	os.Setenv("SERVICE_ACCOUNT_ID", "any-id")
 	os.Setenv("SERVICE_ACCOUNT_SECRET", "anysecret")
-	witServer := startOSIOServer(9090, serveWITRequest)
+	witServer := common.StartOSIOServer(9090, common.ServeWITRequest)
 	defer witServer.Close()
-	authServer := startOSIOServer(9091, serverAUTHRequest2)
+	authServer := common.StartOSIOServer(9091, common.ServerAuthRequest(serveProviderCluster))
 	defer authServer.Close()
 
 	// Start Traefik
@@ -33,9 +33,9 @@ func (s *OSIOProviderSuite) TestOSIOProvider(c *check.C) {
 	defer cmd.Process.Kill()
 
 	// Start OSIO servers
-	ts1 := startOSIOServer(8081, nil)
+	ts1 := common.StartOSIOServer(8081, nil)
 	defer ts1.Close()
-	ts2 := startOSIOServer(8082, nil)
+	ts2 := common.StartOSIOServer(8082, nil)
 	defer ts2.Close()
 
 	// make multiple reqeust on some time gap
@@ -63,59 +63,13 @@ func (s *OSIOProviderSuite) TestOSIOProvider(c *check.C) {
 
 var oneClusterExists = false
 
-func serverAUTHRequest2(rw http.ResponseWriter, req *http.Request) {
-	path := req.URL.Path
-	if path == "/api/token" {
-		tokenAPIResponse := `{"access_token": "1111","token_type": "bearer"}`
-		rw.Write([]byte(tokenAPIResponse))
-	} else if path == "/api/clusters" {
-		clustersAPIResponse := ""
-		if oneClusterExists == false {
-			clustersAPIResponse = getTwoCluster()
-			oneClusterExists = true
-		} else {
-			clustersAPIResponse = getOneCluster()
-		}
-		rw.Write([]byte(clustersAPIResponse))
+func serveProviderCluster() string {
+	clustersAPIResponse := ""
+	if oneClusterExists == false {
+		clustersAPIResponse = common.TwoClusterData()
+		oneClusterExists = true
+	} else {
+		clustersAPIResponse = common.OneClusterData()
 	}
-}
-
-func getTwoCluster() string {
-	// "api-url": "https://api.starter-us-east-2.openshift.com/",
-	// "api-url": "https://api.starter-us-east-2a.openshift.com/",
-	res := `{
-		"data": [
-			{
-				"api-url": "http://127.0.0.1:8081/",
-				"app-dns": "8a09.starter-us-east-2.openshiftapps.com",
-				"console-url": "https://console.starter-us-east-2.openshift.com/console/",
-				"metrics-url": "https://metrics.starter-us-east-2.openshift.com/",
-				"name": "us-east-2"
-			},
-			{
-				"api-url": "http://127.0.0.1:8082/",
-				"app-dns": "b542.starter-us-east-2a.openshiftapps.com",
-				"console-url": "https://console.starter-us-east-2a.openshift.com/console/",
-				"metrics-url": "https://metrics.starter-us-east-2a.openshift.com/",
-				"name": "us-east-2a"
-			}
-		]
-	}`
-	return res
-}
-
-func getOneCluster() string {
-	// "api-url": "https://api.starter-us-east-2.openshift.com/",
-	res := `{
-		"data": [
-			{
-				"api-url": "http://localhost:8081/",
-				"app-dns": "8a09.starter-us-east-2.openshiftapps.com",
-				"console-url": "https://console.starter-us-east-2.openshift.com/console/",
-				"metrics-url": "https://metrics.starter-us-east-2.openshift.com/",
-				"name": "us-east-2"
-			}
-		]
-	}`
-	return res
+	return clustersAPIResponse
 }
