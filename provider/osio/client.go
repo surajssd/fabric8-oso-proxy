@@ -8,6 +8,11 @@ import (
 	"net/http"
 )
 
+type client interface {
+	callTokenAPI(tokenAPI string, tokenReq *tokenRequest) (*tokenResponse, error)
+	callClusterAPI(clusterAPIURL string, tokenResp *tokenResponse) (*clusterResponse, error)
+}
+
 type authClient struct {
 	*http.Client
 }

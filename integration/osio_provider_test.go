@@ -42,6 +42,7 @@ func (s *OSIOProviderSuite) TestOSIOProvider(c *check.C) {
 	// note, req has 'Bearer 2222' so it should go to 'http://127.0.0.1:8082' check serverAUTHRequest2()
 	// check serverAUTHRequest2(), return 'http://127.0.0.1:8082' cluster for only first time
 	// so first few response would be 'HTTP 200 OK' and then rest would be 'HTTP 404 not found'
+	gotOk := false
 	gotNotFound := false
 	for i := 0; i < 6; i++ {
 		time.Sleep(1 * time.Second)
@@ -49,11 +50,14 @@ func (s *OSIOProviderSuite) TestOSIOProvider(c *check.C) {
 		req.Header.Add("Authorization", "Bearer 2222")
 		res, _ := try.Response(req, 500*time.Millisecond)
 		log.Printf("req res.StatusCode=%d", res.StatusCode)
-		if res.StatusCode == http.StatusNotFound {
+		if res.StatusCode == http.StatusOK {
+			gotOk = true
+		} else if res.StatusCode == http.StatusNotFound {
 			gotNotFound = true
 			break
 		}
 	}
+	c.Assert(gotOk, check.Equals, true)
 	c.Assert(gotNotFound, check.Equals, true)
 }
 

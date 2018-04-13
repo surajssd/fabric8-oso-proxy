@@ -29,7 +29,7 @@ type Provider struct {
 	TokenAPI             string `description:"Auth token API" export:"true"`
 	ClusterAPI           string `description:"Cluster data API" export:"true"`
 
-	authClient        *authClient
+	client            client
 	tokenResp         *tokenResponse
 	defaultBackendURL string
 }
@@ -39,7 +39,11 @@ type Provider struct {
 func (p *Provider) Provide(configChan chan<- types.ConfigMessage, pool *safe.Pool, constraints types.Constraints) error {
 	log.Debugf("Configuring %s provider", providerName)
 	p.init(configChan)
+	p.scheduleConfigPull(configChan, pool)
+	return nil
+}
 
+func (p *Provider) scheduleConfigPull(configChan chan<- types.ConfigMessage, pool *safe.Pool) {
 	handleCanceled := func(ctx context.Context, err error) error {
 		if ctx.Err() == context.Canceled || err == context.Canceled {
 			return nil
@@ -66,9 +70,11 @@ func (p *Provider) Provide(configChan chan<- types.ConfigMessage, pool *safe.Poo
 			if err != nil {
 				return handleCanceled(ctx, err)
 			}
-			configChan <- types.ConfigMessage{
-				ProviderName:  providerName,
-				Configuration: config,
+			if config != nil {
+				configChan <- types.ConfigMessage{
+					ProviderName:  providerName,
+					Configuration: config,
+				}
 			}
 
 			reload := time.NewTicker(time.Second * time.Duration(p.RefreshSeconds))
@@ -80,9 +86,11 @@ func (p *Provider) Provide(configChan chan<- types.ConfigMessage, pool *safe.Poo
 					if err != nil {
 						return handleCanceled(ctx, err)
 					}
-					configChan <- types.ConfigMessage{
-						ProviderName:  providerName,
-						Configuration: config,
+					if config != nil {
+						configChan <- types.ConfigMessage{
+							ProviderName:  providerName,
+							Configuration: config,
+						}
 					}
 				case <-ctx.Done():
 					return handleCanceled(ctx, ctx.Err())
@@ -98,14 +106,13 @@ func (p *Provider) Provide(configChan chan<- types.ConfigMessage, pool *safe.Poo
 			log.Errorf("Cannot connect to %s Provider api %+v", providerName, err)
 		}
 	})
-	return nil
 }
 
 func (p *Provider) init(configChan chan<- types.ConfigMessage) {
 	if p.RefreshSeconds <= 0 {
 		p.RefreshSeconds = 60
 	}
-	p.authClient = &authClient{Client: http.DefaultClient}
+	p.client = &authClient{Client: http.DefaultClient}
 }
 
 func (p *Provider) fetchToken() error {
@@ -113,7 +120,7 @@ func (p *Provider) fetchToken() error {
 		return nil
 	}
 	tokenReq := &tokenRequest{GrantType: "client_credentials", ClientID: p.ServiceAccountID, ClientSecret: p.ServiceAccountSecret}
-	tokenResp, err := p.authClient.callTokenAPI(p.TokenAPI, tokenReq)
+	tokenResp, err := p.client.callTokenAPI(p.TokenAPI, tokenReq)
 	if err != nil {
 		return err
 	}
@@ -122,7 +129,7 @@ func (p *Provider) fetchToken() error {
 }
 
 func (p *Provider) loadConfig() (*types.Configuration, error) {
-	clusterResponse, err := p.authClient.callClusterAPI(p.ClusterAPI, p.tokenResp)
+	clusterResponse, err := p.client.callClusterAPI(p.ClusterAPI, p.tokenResp)
 	if err != nil {
 		return nil, err
 	}
@@ -130,13 +137,12 @@ func (p *Provider) loadConfig() (*types.Configuration, error) {
 }
 
 func (p *Provider) loadRules(clusterResp *clusterResponse) *types.Configuration {
-	if len(clusterResp.Clusters) <= 0 {
-		return nil
-	}
-
 	config := &types.Configuration{
 		Frontends: make(map[string]*types.Frontend),
 		Backends:  make(map[string]*types.Backend),
+	}
+	if len(clusterResp.Clusters) <= 0 {
+		return config
 	}
 
 	defaultBackendExist := false
@@ -150,9 +156,12 @@ func (p *Provider) loadRules(clusterResp *clusterResponse) *types.Configuration 
 	}
 	if !defaultBackendExist {
 		p.defaultBackendURL = clusterResp.Clusters[0].APIURL
+	}
+	if p.defaultBackendURL != "" {
 		config.Frontends["default"] = createFrontend("default", "default")
 		config.Backends["default"] = createBackend(p.defaultBackendURL)
 	}
+
 	return config
 }
 
