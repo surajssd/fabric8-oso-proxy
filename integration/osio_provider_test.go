@@ -44,7 +44,7 @@ func (s *OSIOProviderSuite) TestOSIOProvider(c *check.C) {
 	// so first few response would be 'HTTP 200 OK' and then rest would be 'HTTP 404 not found'
 	gotOk := false
 	gotNotFound := false
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 8; i++ {
 		time.Sleep(1 * time.Second)
 		req, _ := http.NewRequest("GET", "http://127.0.0.1:8000/test", nil)
 		req.Header.Add("Authorization", "Bearer 2222")
@@ -52,7 +52,7 @@ func (s *OSIOProviderSuite) TestOSIOProvider(c *check.C) {
 		log.Printf("req res.StatusCode=%d", res.StatusCode)
 		if res.StatusCode == http.StatusOK {
 			gotOk = true
-		} else if res.StatusCode == http.StatusNotFound {
+		} else if gotOk && res.StatusCode == http.StatusNotFound {
 			gotNotFound = true
 			break
 		}
