@@ -43,7 +43,10 @@ type clusterResponse struct {
 
 func (client *authClient) callTokenAPI(tokenAPI string, tokenReq *tokenRequest) (*tokenResponse, error) {
 	reqBody := new(bytes.Buffer)
-	json.NewEncoder(reqBody).Encode(tokenReq)
+	err := json.NewEncoder(reqBody).Encode(tokenReq)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequest(http.MethodPost, tokenAPI, reqBody)
 	if err != nil {
 		return nil, err
@@ -58,7 +61,10 @@ func (client *authClient) callTokenAPI(tokenAPI string, tokenReq *tokenRequest) 
 
 	defer resp.Body.Close()
 	var tokenResp *tokenResponse
-	json.NewDecoder(resp.Body).Decode(&tokenResp)
+	err = json.NewDecoder(resp.Body).Decode(&tokenResp)
+	if err != nil {
+		return nil, err
+	}
 	return tokenResp, nil
 }
 
