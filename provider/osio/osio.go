@@ -39,11 +39,11 @@ type Provider struct {
 func (p *Provider) Provide(configChan chan<- types.ConfigMessage, pool *safe.Pool, constraints types.Constraints) error {
 	log.Debugf("Configuring %s provider", providerName)
 	p.init(configChan)
-	p.scheduleConfigPull(configChan, pool)
+	p.schedule(configChan, pool)
 	return nil
 }
 
-func (p *Provider) scheduleConfigPull(configChan chan<- types.ConfigMessage, pool *safe.Pool) {
+func (p *Provider) schedule(configChan chan<- types.ConfigMessage, pool *safe.Pool) {
 	handleCanceled := func(ctx context.Context, err error) error {
 		if ctx.Err() == context.Canceled || err == context.Canceled {
 			return nil
