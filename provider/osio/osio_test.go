@@ -39,7 +39,7 @@ func TestScheduleConfigPull(t *testing.T) {
 	fp.client = &testClient{}
 	configChan := make(chan types.ConfigMessage)
 	pool := safe.NewPool(context.Background())
-	fp.scheduleConfigPull(configChan, pool)
+	fp.schedule(configChan, pool)
 	config := <-configChan
 	assert.NotNil(t, config)
 }
