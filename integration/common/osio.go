@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	WitURL  = "http://127.0.0.1:9090"
-	AuthURL = "http://127.0.0.1:9091"
+	TenantURL = "http://127.0.0.1:9090/api"
+	AuthURL   = "http://127.0.0.1:9091/api"
 )
 
 func StartOSIOServer(port int, handler func(w http.ResponseWriter, r *http.Request)) (ts *httptest.Server) {
@@ -31,7 +31,7 @@ func StartOSIOServer(port int, handler func(w http.ResponseWriter, r *http.Reque
 	return
 }
 
-func ServeWITRequest(rw http.ResponseWriter, req *http.Request) {
+func ServeTenantRequest(rw http.ResponseWriter, req *http.Request) {
 	authHeader := req.Header.Get("Authorization")
 
 	host := ""

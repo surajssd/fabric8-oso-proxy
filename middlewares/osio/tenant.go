@@ -6,10 +6,24 @@ import (
 	"net/http"
 )
 
+type tenantData struct {
+}
+
+type tenantLocator struct {
+	client    *http.Client
+	tenantURL string
+}
+
+func (t *tenantLocator) GetTenant(token string) (namespace, error) {
+	return locateTenant(t.client, t.tenantURL, token)
+}
+
+func (t *tenantLocator) GetTenantById(token, userID string) (namespace, error) {
+	return locateTenantByID(t.client, t.tenantURL, token, userID)
+}
+
 func CreateTenantLocator(client *http.Client, tenantBaseURL string) TenantLocator {
-	return func(token string) (string, error) {
-		return locateTenant(client, tenantBaseURL, token)
-	}
+	return &tenantLocator{client: client, tenantURL: tenantBaseURL}
 }
 
 type response struct {
@@ -25,32 +39,56 @@ type attributes struct {
 }
 
 type namespace struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
 	ClusterURL string `json:"cluster-url"`
 }
 
-func getClusterURL(resp response) (string, error) {
+func getNamesapce(resp response) (ns namespace, err error) {
 	if len(resp.Data.Attributes.Namespaces) == 0 {
-		return "", fmt.Errorf("unable to locate cluster url")
+		return ns, fmt.Errorf("unable to locate cluster url")
 	}
 
-	return resp.Data.Attributes.Namespaces[0].ClusterURL, nil
+	return resp.Data.Attributes.Namespaces[0], nil
 }
 
-func locateTenant(client *http.Client, tenantBaseURL, osioToken string) (string, error) {
-
-	req, err := http.NewRequest("GET", tenantBaseURL+"/user/services", nil)
+func locateTenant(client *http.Client, tenantBaseURL, token string) (ns namespace, err error) {
+	req, err := http.NewRequest("GET", tenantBaseURL+"/tenant", nil)
 	if err != nil {
-		return "", err
+		return ns, err
 	}
-	req.Header.Set(Authorization, "Bearer "+osioToken)
-	//req = req.WithContext(context.)
+	req.Header.Set(Authorization, "Bearer "+token)
 	resp, err := client.Do(req)
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Unknown status code " + resp.Status)
+		return ns, fmt.Errorf("Unknown status code " + resp.Status)
 	}
 	defer resp.Body.Close()
 
 	var r response
-	json.NewDecoder(resp.Body).Decode(&r)
-	return getClusterURL(r)
+	err = json.NewDecoder(resp.Body).Decode(&r)
+	if err != nil {
+		return ns, err
+	}
+	return getNamesapce(r)
+}
+
+func locateTenantByID(client *http.Client, tenantBaseURL, token, userID string) (ns namespace, err error) {
+	url := fmt.Sprintf("%s/tenants/%s", tenantBaseURL, userID)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return ns, err
+	}
+	req.Header.Set(Authorization, "Bearer "+token)
+	resp, err := client.Do(req)
+	if resp.StatusCode != http.StatusOK {
+		return ns, fmt.Errorf("Unknown status code " + resp.Status)
+	}
+	defer resp.Body.Close()
+
+	var r response
+	err = json.NewDecoder(resp.Body).Decode(&r)
+	if err != nil {
+		return ns, err
+	}
+	return getNamesapce(r)
 }

@@ -16,11 +16,12 @@ type OSIOProviderSuite struct{ BaseSuite }
 
 func (s *OSIOProviderSuite) TestOSIOProvider(c *check.C) {
 	// configure OSIO
-	os.Setenv("WIT_URL", common.WitURL)
+	os.Setenv("TENANT_URL", common.TenantURL)
 	os.Setenv("AUTH_URL", common.AuthURL)
 	os.Setenv("SERVICE_ACCOUNT_ID", "any-id")
 	os.Setenv("SERVICE_ACCOUNT_SECRET", "anysecret")
-	witServer := common.StartOSIOServer(9090, common.ServeWITRequest)
+	os.Setenv("AUTH_TOKEN_KEY", "secret")
+	witServer := common.StartOSIOServer(9090, common.ServeTenantRequest)
 	defer witServer.Close()
 	authServer := common.StartOSIOServer(9091, common.ServerAuthRequest(serveProviderCluster))
 	defer authServer.Close()
