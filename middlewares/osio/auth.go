@@ -146,7 +146,8 @@ func (a *OSIOAuth) resolveByToken(token string) (cacheData, error) {
 }
 
 func (a *OSIOAuth) resolveByID(userID, token string) (cacheData, error) {
-	key := cacheKey(userID)
+	plainKey := fmt.Sprintf("%s_%s", token, userID)
+	key := cacheKey(plainKey)
 	val, err := a.cache.Get(key, cacheResolverByID(a.RequestTenantLocation, a.RequestTenantToken, a.RequestSrvAccToken, a.RequestSecretLocation, token, userID)).Get()
 
 	if data, ok := val.(cacheData); ok {

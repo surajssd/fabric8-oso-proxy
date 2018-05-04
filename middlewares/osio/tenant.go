@@ -15,11 +15,13 @@ type tenantLocator struct {
 }
 
 func (t *tenantLocator) GetTenant(token string) (namespace, error) {
-	return locateTenant(t.client, t.tenantURL, token)
+	url := fmt.Sprintf("%s/tenant", t.tenantURL)
+	return locateTenant(t.client, url, token)
 }
 
 func (t *tenantLocator) GetTenantById(token, userID string) (namespace, error) {
-	return locateTenantByID(t.client, t.tenantURL, token, userID)
+	url := fmt.Sprintf("%s/tenants/%s", t.tenantURL, userID)
+	return locateTenant(t.client, url, token)
 }
 
 func CreateTenantLocator(client *http.Client, tenantBaseURL string) TenantLocator {
@@ -44,7 +46,7 @@ type namespace struct {
 	ClusterURL string `json:"cluster-url"`
 }
 
-func getNamesapce(resp response) (ns namespace, err error) {
+func getNamespace(resp response) (ns namespace, err error) {
 	if len(resp.Data.Attributes.Namespaces) == 0 {
 		return ns, fmt.Errorf("unable to locate cluster url")
 	}
@@ -52,28 +54,7 @@ func getNamesapce(resp response) (ns namespace, err error) {
 	return resp.Data.Attributes.Namespaces[0], nil
 }
 
-func locateTenant(client *http.Client, tenantBaseURL, token string) (ns namespace, err error) {
-	req, err := http.NewRequest("GET", tenantBaseURL+"/tenant", nil)
-	if err != nil {
-		return ns, err
-	}
-	req.Header.Set(Authorization, "Bearer "+token)
-	resp, err := client.Do(req)
-	if resp.StatusCode != http.StatusOK {
-		return ns, fmt.Errorf("Unknown status code " + resp.Status)
-	}
-	defer resp.Body.Close()
-
-	var r response
-	err = json.NewDecoder(resp.Body).Decode(&r)
-	if err != nil {
-		return ns, err
-	}
-	return getNamesapce(r)
-}
-
-func locateTenantByID(client *http.Client, tenantBaseURL, token, userID string) (ns namespace, err error) {
-	url := fmt.Sprintf("%s/tenants/%s", tenantBaseURL, userID)
+func locateTenant(client *http.Client, url, token string) (ns namespace, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return ns, err
@@ -90,5 +71,5 @@ func locateTenantByID(client *http.Client, tenantBaseURL, token, userID string) 
 	if err != nil {
 		return ns, err
 	}
-	return getNamesapce(r)
+	return getNamespace(r)
 }
