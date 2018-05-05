@@ -14,7 +14,7 @@ import (
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/tls"
 	"github.com/containous/traefik/types"
-	"gopkg.in/fsnotify.v1"
+	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
 )
 
 var _ provider.Provider = (*Provider)(nil)
